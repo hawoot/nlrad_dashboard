@@ -1,9 +1,15 @@
 """
-Navigation sidebar component.
+Navigation sidebar component with polished styling.
 
 Displays available tools in a hierarchical structure.
 """
 import ipywidgets as widgets
+
+
+# Color palette
+SIDEBAR_BG = '#2c3e50'  # Dark blue-gray
+BUTTON_COLOR = '#3498db'  # Blue
+TEXT_COLOR = '#ffffff'  # White
 
 
 class Navigation:
@@ -33,25 +39,39 @@ class Navigation:
             ipywidgets.VBox: Navigation widget
         """
         # Get hierarchical structure from registry
-        # Structure format:
-        # {
-        #     'RAD': {
-        #         'ingestor': {
-        #             '_tools': ['timeline', 'force_load']
-        #         }
-        #     }
-        # }
         structure = self.registry.get_structure()
 
-        # Create title
-        title = widgets.HTML("<h2>Tools</h2>")
+        # Create title with styling
+        title = widgets.HTML(f"""
+            <div style='
+                padding: 15px;
+                background-color: {SIDEBAR_BG};
+                color: {TEXT_COLOR};
+                text-align: center;
+                font-size: 20px;
+                font-weight: bold;
+                border-bottom: 2px solid #34495e;
+            '>
+                Tools
+            </div>
+        """)
 
         # Create tool buttons for each category
         tool_widgets = []
 
         for category, subcategories in structure.items():
             # Category header
-            category_header = widgets.HTML(f"<h3 style='margin: 10px 0 5px 0;'>{category}</h3>")
+            category_header = widgets.HTML(f"""
+                <div style='
+                    padding: 10px 15px 5px 15px;
+                    color: {TEXT_COLOR};
+                    font-size: 16px;
+                    font-weight: bold;
+                    background-color: {SIDEBAR_BG};
+                '>
+                    {category}
+                </div>
+            """)
             tool_widgets.append(category_header)
 
             # Process subcategories
@@ -62,7 +82,12 @@ class Navigation:
             )
 
         # VBox = Vertical Box (stacked layout)
-        return widgets.VBox([title] + tool_widgets)
+        return widgets.VBox(
+            [title] + tool_widgets,
+            layout=widgets.Layout(
+                background_color=SIDEBAR_BG
+            )
+        )
 
     def _add_subcategory_widgets(self, subcategories, prefix, tool_widgets):
         """
@@ -82,9 +107,18 @@ class Navigation:
                     tool_widgets.append(tool_button)
             else:
                 # This is a subcategory
-                subcat_header = widgets.HTML(
-                    f"<div style='margin-left: 10px; font-weight: bold;'>{key}</div>"
-                )
+                subcat_header = widgets.HTML(f"""
+                    <div style='
+                        padding: 8px 15px 5px 25px;
+                        color: {TEXT_COLOR};
+                        font-size: 14px;
+                        font-weight: bold;
+                        background-color: {SIDEBAR_BG};
+                        opacity: 0.9;
+                    '>
+                        {key}
+                    </div>
+                """)
                 tool_widgets.append(subcat_header)
 
                 # Recursively process this subcategory
@@ -100,20 +134,20 @@ class Navigation:
 
         Args:
             tool_name: Display name of the tool
-            full_path: Full path (e.g., "RAD/ingestor/timeline")
+            full_path: Full path (e.g., "RAD/Ingestor/Timeline")
 
         Returns:
             ipywidgets.Button: Tool button
         """
-        # Create a button with the tool name
+        # Create a button with the tool name (already properly formatted)
         button = widgets.Button(
-            description=tool_name.replace('_', ' ').title(),
+            description=tool_name,  # Tool name is already capitalized
             layout=widgets.Layout(
                 width='90%',
-                margin='2px 0 2px 15px'
+                margin='2px 0 2px 25px'
             ),
-            button_style='',  # '', 'success', 'info', 'warning', 'danger'
-            tooltip=f'Click to open {tool_name}'
+            button_style='info',  # Blue button
+            tooltip=f'Open {tool_name}'
         )
 
         # When clicked, emit the tool_selected event

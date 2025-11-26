@@ -22,8 +22,8 @@ class ForceLoadTool(BaseTool):
         Dictionary with success status and details
     """
 
-    category = "RAD/ingestor"
-    name = "force_load"
+    category = "RAD/Ingestor"
+    name = "Force Load"
     description = "Force load configuration data to predefined tables"
 
     def run(
@@ -31,7 +31,8 @@ class ForceLoadTool(BaseTool):
         context,
         table_name,
         action='save',
-        config=None
+        config=None,
+        dry_run=True
     ):
         """
         Execute force load.
@@ -39,8 +40,9 @@ class ForceLoadTool(BaseTool):
         Args:
             context: Execution context
             table_name: Table to load
-            action: 'get_default' to get default config, 'save' to save config
-            config: Configuration data (required for 'save' action)
+            action: 'get_default' to get default config, 'force_load' to execute force load
+            config: Configuration data (required for 'force_load' action)
+            dry_run: If True, performs dry run without saving (default True)
 
         Returns:
             Dictionary with result details
@@ -49,7 +51,7 @@ class ForceLoadTool(BaseTool):
             ParameterValidationError: If parameters are invalid
         """
         # Validate table name
-        context.logger.info(f"Validating parameters: table={table_name}, action={action}")
+        context.logger.info(f"Validating parameters: table={table_name}, action={action}, dry_run={dry_run}")
 
         if table_name not in FORCE_LOAD_TABLES:
             available_tables = list(FORCE_LOAD_TABLES.keys())
@@ -72,6 +74,32 @@ class ForceLoadTool(BaseTool):
                 'table_name': table_name
             }
 
+        elif action == 'force_load':
+            if config is None:
+                raise ParameterValidationError(
+                    "config parameter is required for 'force_load' action",
+                    user_message="Configuration data is required"
+                )
+
+            # Validate configuration data
+            context.logger.info(f"Validating {len(config)} configuration rows")
+            model.validate_config(config)
+
+            context.logger.info("Configuration validated successfully")
+
+            # Execute force load (with dry run support)
+            mode = "dry run" if dry_run else "force load"
+            context.logger.info(f"Executing {mode} to {table_name}")
+            result = model.execute_force_load(table_name, config, dry_run=dry_run)
+
+            context.logger.info(
+                f"{mode.capitalize()} complete: {result['rows_processed']} rows processed",
+                extra={'result': result}
+            )
+
+            return result
+
+        # Support legacy 'save' action for backwards compatibility
         elif action == 'save':
             if config is None:
                 raise ParameterValidationError(
@@ -87,7 +115,7 @@ class ForceLoadTool(BaseTool):
 
             # Execute force load
             context.logger.info(f"Executing force load to {table_name}")
-            result = model.execute_force_load(table_name, config)
+            result = model.execute_force_load(table_name, config, dry_run=False)
 
             context.logger.info(
                 f"Force load complete: {result['rows_processed']} rows processed",
@@ -98,6 +126,6 @@ class ForceLoadTool(BaseTool):
 
         else:
             raise ParameterValidationError(
-                f"Invalid action '{action}'. Must be 'get_default' or 'save'",
+                f"Invalid action '{action}'. Must be 'get_default', 'force_load', or 'save'",
                 user_message="Invalid action specified"
             )

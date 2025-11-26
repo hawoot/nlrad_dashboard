@@ -20,9 +20,10 @@ class Registry:
     def __init__(self):
         """Initialize registry with explicit tool mapping."""
         # Dictionary mapping tool paths to tool classes
+        # Paths use capitalized display names
         self._tools: Dict[str, Type[BaseTool]] = {
-            'RAD/ingestor/timeline': TimelineTool,
-            'RAD/ingestor/force_load': ForceLoadTool,
+            'RAD/Ingestor/Timeline': TimelineTool,
+            'RAD/Ingestor/Force Load': ForceLoadTool,
         }
 
         # Build navigation structure from tool paths

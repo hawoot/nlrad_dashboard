@@ -11,6 +11,13 @@ from ui.components.navigation import Navigation
 from ui.components.content_area import ContentArea
 
 
+# Color palette
+BG_MAIN = '#f5f5f5'  # Light gray background
+SIDEBAR_BG = '#2c3e50'  # Dark blue-gray sidebar
+CONTENT_BG = '#ffffff'  # White content area
+BORDER_COLOR = '#34495e'  # Darker border
+
+
 def create_app():
     """
     Create and return the main application widget.
@@ -58,23 +65,27 @@ def create_app():
         content_area.widget
     ])
 
-    # Style the layout
+    # Style the layout with professional color scheme
     main_layout.layout = widgets.Layout(
         width='100%',
-        height='800px'
+        height='800px',
+        background_color=BG_MAIN
     )
 
     navigation.widget.layout = widgets.Layout(
         width='20%',
         height='800px',
-        border='1px solid #ddd',
-        padding='10px'
+        border=f'1px solid {BORDER_COLOR}',
+        padding='0px',  # Navigation handles its own padding
+        background_color=SIDEBAR_BG
     )
 
     content_area.widget.layout = widgets.Layout(
         width='80%',
         height='800px',
-        padding='20px'
+        padding='20px',
+        background_color=CONTENT_BG,
+        overflow_y='auto'
     )
 
     return main_layout

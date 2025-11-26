@@ -7,7 +7,17 @@ import ipywidgets as widgets
 from IPython.display import display
 import pandas as pd
 from ui.components.error_display import ErrorDisplay
+from ui.components.dataframe_table import create_dataframe_table
 from backend.models.ingestor_force import FORCE_LOAD_TABLES
+
+
+# Color palette
+BUTTON_PRIMARY = '#3498db'
+BUTTON_SUCCESS = '#27ae60'
+BUTTON_WARNING = '#e67e22'
+BUTTON_DANGER = '#e74c3c'
+BG_LIGHT = '#f5f5f5'
+BORDER_COLOR = '#ddd'
 
 
 class ForceLoadUI:
@@ -17,8 +27,9 @@ class ForceLoadUI:
     Shows:
     - Dropdown for table selection
     - Editable table for configuration
-    - Add/Remove row buttons
-    - Submit button to save changes
+    - Add row button and per-row delete buttons
+    - Dry Run checkbox (default checked)
+    - Submit button with dynamic text
     """
 
     def __init__(self, executor, tool_path):
@@ -74,9 +85,8 @@ class ForceLoadUI:
         # ===== TABLE EDITOR =====
 
         # Container for the editable table
-        # This will be populated when user loads a table
         self.table_container = widgets.VBox([
-            widgets.HTML("""
+            widgets.HTML(f"""
                 <div style='padding: 40px; text-align: center; color: #666;'>
                     Select a table and click "Load Table" to begin editing.
                 </div>
@@ -84,6 +94,16 @@ class ForceLoadUI:
         ])
 
         # ===== ACTION BUTTONS =====
+
+        # Dry Run checkbox (default checked)
+        self.dry_run_checkbox = widgets.Checkbox(
+            value=True,
+            description='Dry Run',
+            indent=False,
+            layout=widgets.Layout(width='120px'),
+            disabled=True  # Disabled until table loaded
+        )
+        self.dry_run_checkbox.observe(self._on_dry_run_changed, names='value')
 
         self.add_row_button = widgets.Button(
             description='Add Row',
@@ -94,17 +114,8 @@ class ForceLoadUI:
         )
         self.add_row_button.on_click(self._on_add_row)
 
-        self.remove_row_button = widgets.Button(
-            description='Remove Last Row',
-            button_style='warning',
-            icon='minus',
-            layout=widgets.Layout(width='160px'),
-            disabled=True
-        )
-        self.remove_row_button.on_click(self._on_remove_row)
-
         self.submit_button = widgets.Button(
-            description='Submit Changes',
+            description='Dry Run',  # Default text
             button_style='primary',
             icon='check',
             layout=widgets.Layout(width='160px'),
@@ -117,7 +128,7 @@ class ForceLoadUI:
         self.output_area = widgets.Output(
             layout=widgets.Layout(
                 width='100%',
-                border='1px solid #ddd',
+                border=f'1px solid {BORDER_COLOR}',
                 padding='10px',
                 margin='10px 0'
             )
@@ -132,7 +143,7 @@ class ForceLoadUI:
 
         action_buttons = widgets.HBox([
             self.add_row_button,
-            self.remove_row_button,
+            self.dry_run_checkbox,
             self.submit_button
         ], layout=widgets.Layout(gap='10px', padding='10px'))
 
@@ -146,15 +157,22 @@ class ForceLoadUI:
 
     def _create_instructions(self):
         """Create instructions text."""
-        return widgets.HTML("""
-            <div style='background-color: #f5f5f5; padding: 15px; border-radius: 5px; margin-bottom: 15px;'>
+        return widgets.HTML(f"""
+            <div style='background-color: {BG_LIGHT}; padding: 15px; border-radius: 5px; margin-bottom: 15px;'>
                 <h3 style='margin-top: 0;'>Force Load Configuration</h3>
                 <p style='margin-bottom: 0;'>
                     Select a table, load the default configuration, edit values as needed,
-                    add or remove rows, then submit your changes.
+                    add or remove rows, then submit. Use "Dry Run" to preview results without saving.
                 </p>
             </div>
         """)
+
+    def _on_dry_run_changed(self, change):
+        """Update button text when dry run checkbox changes."""
+        if change['new']:
+            self.submit_button.description = 'Dry Run'
+        else:
+            self.submit_button.description = 'Force Load Run'
 
     def _on_table_changed(self, change):
         """Handle table dropdown change."""
@@ -204,28 +222,38 @@ class ForceLoadUI:
 
         # Get table schema
         schema = FORCE_LOAD_TABLES[self.current_table_name]
-        # Extract columns from the data keys (since we removed explicit column definitions)
-        columns = [{'name': key} for key in ['configName', 'key', 'group']]
+        columns = ['configName', 'key', 'group']
 
-        # Create input widgets for each cell
-        # We'll use a grid layout
+        # Create input widgets for each row
         table_widgets = []
 
         # Header row
-        header_widgets = []
-        for col in columns:
-            required_badge = " *" if col.get('required') else ""
-            header_widgets.append(widgets.HTML(
-                f"<b>{col['name']}{required_badge}</b>",
+        header_widgets = [
+            widgets.HTML(
+                "<b>configName</b>",
                 layout=widgets.Layout(width='200px', padding='5px')
-            ))
+            ),
+            widgets.HTML(
+                "<b>key</b>",
+                layout=widgets.Layout(width='200px', padding='5px')
+            ),
+            widgets.HTML(
+                "<b>group</b>",
+                layout=widgets.Layout(width='200px', padding='5px')
+            ),
+            widgets.HTML(
+                "<b>Actions</b>",
+                layout=widgets.Layout(width='80px', padding='5px')
+            )
+        ]
         table_widgets.append(widgets.HBox(header_widgets))
 
-        # Data rows
+        # Data rows with per-row delete buttons
         for row_idx, row_data in enumerate(self.current_data):
             row_widgets = []
-            for col in columns:
-                col_name = col['name']
+
+            # Input fields for each column
+            for col_name in columns:
                 value = row_data.get(col_name, '')
 
                 # Create text input for each cell
@@ -242,11 +270,23 @@ class ForceLoadUI:
 
                 row_widgets.append(text_input)
 
-            table_widgets.append(widgets.HBox(row_widgets))
+            # Delete button for this row
+            delete_button = widgets.Button(
+                description='✗',
+                button_style='danger',
+                layout=widgets.Layout(width='60px'),
+                tooltip=f'Delete row {row_idx + 1}'
+            )
+            delete_button.row_idx = row_idx
+            delete_button.on_click(self._on_delete_row)
+
+            row_widgets.append(delete_button)
+
+            table_widgets.append(widgets.HBox(row_widgets, layout=widgets.Layout(margin='2px 0')))
 
         # Show table info
         info_html = widgets.HTML(f"""
-            <div style='padding: 10px; background-color: #e3f2fd; margin-bottom: 10px;'>
+            <div style='padding: 10px; background-color: #e3f2fd; margin-bottom: 10px; border-radius: 5px;'>
                 <b>Table:</b> {self.current_table_name}<br>
                 <b>Description:</b> {schema['description']}<br>
                 <b>Rows:</b> {len(self.current_data)}
@@ -256,8 +296,9 @@ class ForceLoadUI:
         self.table_container.children = [
             info_html,
             widgets.VBox(table_widgets, layout=widgets.Layout(
-                border='1px solid #ddd',
-                padding='10px'
+                border=f'1px solid {BORDER_COLOR}',
+                padding='10px',
+                background_color='white'
             ))
         ]
 
@@ -283,14 +324,16 @@ class ForceLoadUI:
         # Re-render table
         self._render_table()
 
-    def _on_remove_row(self, button):
-        """Remove the last row."""
-        if self.current_data:
-            self.current_data.pop()
+    def _on_delete_row(self, button):
+        """Delete a specific row."""
+        row_idx = button.row_idx
+
+        if 0 <= row_idx < len(self.current_data):
+            self.current_data.pop(row_idx)
             self._render_table()
 
     def _on_submit(self, button):
-        """Submit the changes."""
+        """Submit the changes (either dry run or actual force load)."""
         self.output_area.clear_output()
 
         if not self.current_data:
@@ -303,21 +346,24 @@ class ForceLoadUI:
 
         # Show loading
         with self.output_area:
-            display(widgets.HTML("""
+            is_dry_run = self.dry_run_checkbox.value
+            action_text = "Running dry run" if is_dry_run else "Executing force load"
+            display(widgets.HTML(f"""
                 <div style='text-align: center; padding: 20px;'>
                     <div style='font-size: 24px;'>⏳</div>
-                    <div>Submitting changes...</div>
+                    <div>{action_text}...</div>
                 </div>
             """))
 
-        # Execute tool to save config
+        # Execute tool
         result = self.executor.execute(
             user='dashboard_user',
             tool_path=self.tool_path,
             params={
                 'table_name': self.current_table_name,
-                'action': 'save',
-                'config': self.current_data
+                'action': 'force_load',
+                'config': self.current_data,
+                'dry_run': self.dry_run_checkbox.value
             }
         )
 
@@ -325,9 +371,7 @@ class ForceLoadUI:
 
         with self.output_area:
             if result.success:
-                display(self.error_display.create_success_widget(
-                    f"Successfully saved {len(self.current_data)} rows for {self.current_table_name}"
-                ))
+                self._display_success(result.data, is_dry_run=self.dry_run_checkbox.value)
             else:
                 display(self.error_display.create_error_widget(
                     title=result.error_type or "Error",
@@ -335,14 +379,37 @@ class ForceLoadUI:
                     details=result.traceback
                 ))
 
+    def _display_success(self, data, is_dry_run=True):
+        """
+        Display successful results.
+
+        Args:
+            data: Result data containing DataFrame records
+            is_dry_run: Whether this was a dry run
+        """
+        # Extract records from result
+        records = data.get('records', data)
+
+        # Success message
+        mode_text = "Dry run" if is_dry_run else "Force load"
+        display(self.error_display.create_success_widget(
+            f"{mode_text} completed successfully - {len(records)} records"
+        ))
+
+        # Convert to DataFrame and display with reusable component
+        df = pd.DataFrame(records)
+        title = f"{'Dry Run' if is_dry_run else 'Force Load'} Results"
+        table_widget = create_dataframe_table(df, title=title)
+        display(table_widget)
+
     def _enable_buttons(self):
         """Enable action buttons."""
         self.add_row_button.disabled = False
-        self.remove_row_button.disabled = False
+        self.dry_run_checkbox.disabled = False
         self.submit_button.disabled = False
 
     def _disable_buttons(self):
         """Disable action buttons."""
         self.add_row_button.disabled = True
-        self.remove_row_button.disabled = True
+        self.dry_run_checkbox.disabled = True
         self.submit_button.disabled = True

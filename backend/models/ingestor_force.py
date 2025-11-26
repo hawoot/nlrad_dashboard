@@ -130,7 +130,8 @@ class IngestorForceModel:
     def execute_force_load(
         self,
         table_name,
-        config_data
+        config_data,
+        dry_run=True
     ):
         """
         Execute force load operation.
@@ -138,18 +139,20 @@ class IngestorForceModel:
         Args:
             table_name: Table to load
             config_data: Configuration data
+            dry_run: If True, performs dry run without saving
 
         Returns:
             Dictionary with:
                 - success: True/False
                 - message: Result message
                 - rows_processed: Number of rows processed
+                - records: List of result records with DataFrame columns
 
         Raises:
             BusinessLogicError: If force load fails
         """
-        # TODO: Replace with actual force load logic
-        # For now, simulate success
+        from datetime import datetime, timedelta
+        import random
 
         # Filter out empty rows
         valid_rows = [
@@ -157,9 +160,35 @@ class IngestorForceModel:
             if any(row.get(k) for k in ['configName', 'key', 'group'])
         ]
 
+        # Generate mock data with all required columns
+        records = []
+        base_date = datetime(2025, 1, 15)
+
+        for i, row in enumerate(valid_rows):
+            # Mock timestamps and IDs
+            last_loaded_ts = (base_date - timedelta(days=random.randint(1, 30))).strftime('%Y-%m-%d %H:%M:%S')
+            process_ts = (base_date - timedelta(days=random.randint(0, 5))).strftime('%Y-%m-%d %H:%M:%S')
+            cob = (base_date - timedelta(days=random.randint(0, 3))).strftime('%Y-%m-%d')
+            load_id = f"LD{random.randint(10000, 99999)}"
+            data_source_windows = f"Window_{random.randint(1, 5)}"
+
+            record = {
+                'configName': row.get('configName', ''),
+                'key': row.get('key', ''),
+                'group': row.get('group', ''),
+                'LastLoadedTS': last_loaded_ts,
+                'ProcessTS': process_ts,
+                'COB': cob,
+                'LoadID': load_id,
+                'DataSourceWindows': data_source_windows
+            }
+            records.append(record)
+
+        mode = "dry run" if dry_run else "force load"
         return {
             'success': True,
-            'message': f'Successfully loaded {len(valid_rows)} configurations to {table_name}',
+            'message': f'Successfully completed {mode} for {len(valid_rows)} configurations to {table_name}',
             'rows_processed': len(valid_rows),
-            'table_name': table_name
+            'table_name': table_name,
+            'records': records
         }

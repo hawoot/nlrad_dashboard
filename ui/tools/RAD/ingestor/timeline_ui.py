@@ -8,6 +8,7 @@ from datetime import datetime, timedelta
 import pandas as pd
 from IPython.display import display
 from ui.components.error_display import ErrorDisplay
+from ui.components.dataframe_table import create_dataframe_table
 from backend.models.ingestor_timeline import TIMELINE_DESKS
 
 
@@ -121,7 +122,6 @@ class TimelineUI:
                 <h3 style='margin-top: 0;'>Timeline Query</h3>
                 <p style='margin-bottom: 0;'>
                     Select a desk and date to query timeline data.
-                    Results will show timestamp, COB date, data path, and overwrite flag.
                 </p>
             </div>
         """)
@@ -181,20 +181,20 @@ class TimelineUI:
         Display successful results.
 
         Args:
-            data: Result data (list of dicts representing DataFrame rows)
+            data: Result data (dictionary with 'records' key)
         """
+        # Extract records from result
+        records = data.get('records', data)
+
         # Show success message
         display(self.error_display.create_success_widget(
-            f"Found {len(data)} timeline records"
+            f"Found {len(records)} timeline records"
         ))
 
-        # Convert data to DataFrame for display
-        df = pd.DataFrame(data)
-
-        # Create a styled data table
-        # We'll use ipywidgets HTML to render a nice table
-        table_html = self._create_table_html(df)
-        display(widgets.HTML(table_html))
+        # Convert data to DataFrame and display with reusable component
+        df = pd.DataFrame(records)
+        table_widget = create_dataframe_table(df, title="Timeline Results")
+        display(table_widget)
 
     def _display_error(self, result):
         """
@@ -208,78 +208,3 @@ class TimelineUI:
             message=result.user_message or result.error_message,
             details=result.traceback
         ))
-
-    def _create_table_html(self, df):
-        """
-        Create HTML table from DataFrame.
-
-        This creates a styled, sortable table for the results.
-
-        Args:
-            df: Pandas DataFrame
-
-        Returns:
-            str: HTML table string
-        """
-        # Start table
-        html = """
-        <div style='max-height: 500px; overflow-y: auto; border: 1px solid #ddd;'>
-            <table style='
-                width: 100%;
-                border-collapse: collapse;
-                font-size: 14px;
-            '>
-                <thead style='
-                    position: sticky;
-                    top: 0;
-                    background-color: #f0f0f0;
-                    border-bottom: 2px solid #ddd;
-                '>
-                    <tr>
-        """
-
-        # Add column headers
-        for col in df.columns:
-            html += f"""
-                        <th style='
-                            padding: 10px;
-                            text-align: left;
-                            font-weight: bold;
-                        '>{col}</th>
-            """
-
-        html += """
-                    </tr>
-                </thead>
-                <tbody>
-        """
-
-        # Add data rows
-        for idx, row in df.iterrows():
-            # Alternate row colors
-            bg_color = '#ffffff' if idx % 2 == 0 else '#f9f9f9'
-            html += f"<tr style='background-color: {bg_color};'>"
-
-            for col in df.columns:
-                value = row[col]
-                # Format boolean values
-                if isinstance(value, bool):
-                    value = '✓' if value else '✗'
-                    color = 'green' if row[col] else 'red'
-                    html += f"""
-                        <td style='padding: 8px; color: {color}; font-weight: bold;'>
-                            {value}
-                        </td>
-                    """
-                else:
-                    html += f"<td style='padding: 8px;'>{value}</td>"
-
-            html += "</tr>"
-
-        html += """
-                </tbody>
-            </table>
-        </div>
-        """
-
-        return html

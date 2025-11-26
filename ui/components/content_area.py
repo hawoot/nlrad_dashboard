@@ -4,7 +4,7 @@ Content area component.
 Displays tool UIs dynamically when selected from navigation.
 """
 import ipywidgets as widgets
-from ui.components.tool_loader import ToolLoader
+from ui.registry import get_tool_ui_class
 from ui.components.error_display import ErrorDisplay
 
 
@@ -18,7 +18,6 @@ class ContentArea:
 
     def __init__(self):
         """Initialize content area with welcome message."""
-        self.tool_loader = ToolLoader()
         self.current_tool_ui = None  # Reference to currently loaded tool UI
 
         # Create main container (VBox = vertical stacking)
@@ -73,9 +72,8 @@ class ContentArea:
         self.widget.children = [self._create_loading_message(tool_path)]
 
         try:
-            # Load the tool UI class dynamically
-            # This imports the appropriate UI module (e.g., timeline_ui.py)
-            tool_ui_class = self.tool_loader.load_tool_ui(tool_path)
+            # Get the tool UI class from registry
+            tool_ui_class = get_tool_ui_class(tool_path)
 
             # Create instance of the tool UI
             # Pass executor so the UI can execute the tool when user clicks submit

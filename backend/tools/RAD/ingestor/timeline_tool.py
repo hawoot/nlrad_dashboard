@@ -21,8 +21,8 @@ class TimelineTool(BaseTool):
         Dictionary with timeline data and analytics
     """
 
-    category = "RAD/ingestor"
-    name = "timeline"
+    category = "RAD/Ingestor"
+    name = "Timeline"
     description = "Query ingestor timeline data by desk and date"
 
     def run(self, context, desk, date):
