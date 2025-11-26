@@ -3,7 +3,7 @@ Backend initialization and bootstrap.
 
 Called once during application startup.
 """
-from backend.lib.logger import configure_root_logger
+from backend.adapters.logger import configure_root_logger
 from backend.core.registry import get_registry
 from backend.core.executor import get_executor
 from backend.core.model_loader import get_model_loader

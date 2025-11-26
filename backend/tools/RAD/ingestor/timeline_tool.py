@@ -5,9 +5,8 @@ Allows users to query ingestor timeline data by desk and date.
 """
 from datetime import datetime
 from backend.core.base_tool import BaseTool, ExecutionContext
-from backend.models.ingestor_timeline import IngestorTimelineModel
+from backend.models.ingestor_timeline import IngestorTimelineModel, TIMELINE_DESKS
 from backend.lib.errors import ParameterValidationError
-from config.settings import RAD_TIMELINE_DESKS
 
 
 class TimelineTool(BaseTool):
@@ -44,10 +43,10 @@ class TimelineTool(BaseTool):
         # Validate desk
         context.logger.info(f"Validating parameters: desk={desk}, date={date}")
 
-        if desk not in RAD_TIMELINE_DESKS:
+        if desk not in TIMELINE_DESKS:
             raise ParameterValidationError(
-                f"Invalid desk '{desk}'. Must be one of: {RAD_TIMELINE_DESKS}",
-                user_message=f"Please select a valid desk: {', '.join(RAD_TIMELINE_DESKS)}"
+                f"Invalid desk '{desk}'. Must be one of: {TIMELINE_DESKS}",
+                user_message=f"Please select a valid desk: {', '.join(TIMELINE_DESKS)}"
             )
 
         # Validate and parse date

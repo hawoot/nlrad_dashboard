@@ -15,7 +15,7 @@ from typing import Dict, Any
 from backend.core.registry import get_registry
 from backend.core.base_tool import ExecutionContext
 from backend.lib.result import Result
-from backend.lib.logger import get_logger
+from backend.adapters.logger import get_logger
 from backend.lib.errors import (
     ToolExecutionError,
     ToolNotFoundError

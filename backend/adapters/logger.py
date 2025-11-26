@@ -1,15 +1,25 @@
 """
-Logging configuration with structured context.
+Logger adapter - SWAP THIS AT WORK
 
-Provides loggers that automatically include execution context
-(user, request_id, tool_path) in every log statement.
+Currently uses local JSON/text logger implementation.
+To use work environment: Comment out LOCAL section, uncomment WORK section below.
 """
+from pathlib import Path
+
+# ==============================================================================
+# LOCAL IMPLEMENTATION (for development)
+# ==============================================================================
+
 import logging
 import json
 import sys
 from datetime import datetime
 from typing import Dict, Any
-from config.settings import LOG_LEVEL, LOG_FORMAT, LOG_FILE
+
+# Local configuration
+LOG_LEVEL = "INFO"
+LOG_FORMAT = "json"  # json or text
+LOG_FILE = Path(__file__).parent.parent.parent / "logs" / "dashboard.log"
 
 
 class ContextFilter(logging.Filter):
@@ -135,3 +145,16 @@ def get_logger(
         logger.addFilter(context_filter)
 
     return logger
+
+
+# ==============================================================================
+# WORK IMPLEMENTATION (commented out - uncomment when deploying to work)
+# ==============================================================================
+
+# from your_work_package.logging import (
+#     configure_logger as configure_root_logger,
+#     get_logger,
+# )
+#
+# LOG_LEVEL = "INFO"  # Or from work config
+# LOG_FORMAT = "json"  # Or from work config

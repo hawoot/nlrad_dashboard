@@ -5,7 +5,32 @@ Handles force load configuration and execution.
 """
 from typing import List, Dict, Any
 from backend.lib.errors import ParameterValidationError, BusinessLogicError
-from config.settings import RAD_FORCE_LOAD_TABLES
+
+# ==============================================================================
+# FORCE LOAD CONFIGURATION
+# ==============================================================================
+
+FORCE_LOAD_TABLES = {
+    "Inflation Env": {
+        "description": "Inflation environment configuration",
+        "data": [
+            {'configName': 'Config1', 'key': 'inflation.rate', 'group': 'ENV'},
+            {'configName': 'Config2', 'key': 'inflation.curve', 'group': 'ENV'},
+            {'configName': 'Config3', 'key': 'inflation.spread', 'group': 'ENV'},
+        ]
+    },
+    "Options ScenarioGamma": {
+        "description": "Options scenario gamma configuration",
+        "data": [
+            {'configName': 'Gamma1', 'key': 'gamma.scenario.base', 'group': 'OPTS'},
+            {'configName': 'Gamma2', 'key': 'gamma.scenario.stress', 'group': 'OPTS'},
+        ]
+    },
+}
+
+# ==============================================================================
+# MODEL IMPLEMENTATION
+# ==============================================================================
 
 
 class IngestorForceModel:
@@ -35,14 +60,14 @@ class IngestorForceModel:
         Raises:
             ParameterValidationError: If table name not found
         """
-        if table_name not in RAD_FORCE_LOAD_TABLES:
+        if table_name not in FORCE_LOAD_TABLES:
             raise ParameterValidationError(
                 f"Table '{table_name}' not found in configuration",
                 user_message=f"Unknown table: {table_name}"
             )
 
-        table_config = RAD_FORCE_LOAD_TABLES[table_name]
-        return table_config['default_rows']
+        table_config = FORCE_LOAD_TABLES[table_name]
+        return table_config['data']
 
     def get_table_schema(self, table_name):
         """
@@ -52,18 +77,18 @@ class IngestorForceModel:
             table_name: Name of predefined table
 
         Returns:
-            Dictionary with table configuration including columns and description
+            Dictionary with table configuration including description and data
 
         Raises:
             ParameterValidationError: If table name not found
         """
-        if table_name not in RAD_FORCE_LOAD_TABLES:
+        if table_name not in FORCE_LOAD_TABLES:
             raise ParameterValidationError(
                 f"Table '{table_name}' not found in configuration",
                 user_message=f"Unknown table: {table_name}"
             )
 
-        return RAD_FORCE_LOAD_TABLES[table_name]
+        return FORCE_LOAD_TABLES[table_name]
 
     def validate_config(self, config_data):
         """

@@ -5,9 +5,8 @@ Allows users to force load configuration data to predefined tables.
 """
 from typing import List, Dict, Any
 from backend.core.base_tool import BaseTool, ExecutionContext
-from backend.models.ingestor_force import IngestorForceModel
+from backend.models.ingestor_force import IngestorForceModel, FORCE_LOAD_TABLES
 from backend.lib.errors import ParameterValidationError
-from config.settings import RAD_FORCE_LOAD_TABLES
 
 
 class ForceLoadTool(BaseTool):
@@ -31,7 +30,8 @@ class ForceLoadTool(BaseTool):
         self,
         context,
         table_name,
-        config_data
+        action='save',
+        config=None
     ):
         """
         Execute force load.
@@ -39,7 +39,8 @@ class ForceLoadTool(BaseTool):
         Args:
             context: Execution context
             table_name: Table to load
-            config_data: Configuration data
+            action: 'get_default' to get default config, 'save' to save config
+            config: Configuration data (required for 'save' action)
 
         Returns:
             Dictionary with result details
@@ -48,10 +49,10 @@ class ForceLoadTool(BaseTool):
             ParameterValidationError: If parameters are invalid
         """
         # Validate table name
-        context.logger.info(f"Validating parameters: table={table_name}")
+        context.logger.info(f"Validating parameters: table={table_name}, action={action}")
 
-        if table_name not in RAD_FORCE_LOAD_TABLES:
-            available_tables = list(RAD_FORCE_LOAD_TABLES.keys())
+        if table_name not in FORCE_LOAD_TABLES:
+            available_tables = list(FORCE_LOAD_TABLES.keys())
             raise ParameterValidationError(
                 f"Invalid table '{table_name}'. Must be one of: {available_tables}",
                 user_message=f"Please select a valid table: {', '.join(available_tables)}"
@@ -60,19 +61,43 @@ class ForceLoadTool(BaseTool):
         # Create model
         model = IngestorForceModel()
 
-        # Validate configuration data
-        context.logger.info(f"Validating {len(config_data)} configuration rows")
-        model.validate_config(config_data)
+        # Handle different actions
+        if action == 'get_default':
+            context.logger.info(f"Getting default config for {table_name}")
+            default_config = model.get_default_config(table_name)
+            schema = model.get_table_schema(table_name)
+            return {
+                'config': default_config,
+                'schema': schema,
+                'table_name': table_name
+            }
 
-        context.logger.info("Configuration validated successfully")
+        elif action == 'save':
+            if config is None:
+                raise ParameterValidationError(
+                    "config parameter is required for 'save' action",
+                    user_message="Configuration data is required"
+                )
 
-        # Execute force load
-        context.logger.info(f"Executing force load to {table_name}")
-        result = model.execute_force_load(table_name, config_data)
+            # Validate configuration data
+            context.logger.info(f"Validating {len(config)} configuration rows")
+            model.validate_config(config)
 
-        context.logger.info(
-            f"Force load complete: {result['rows_processed']} rows processed",
-            extra={'result': result}
-        )
+            context.logger.info("Configuration validated successfully")
 
-        return result
+            # Execute force load
+            context.logger.info(f"Executing force load to {table_name}")
+            result = model.execute_force_load(table_name, config)
+
+            context.logger.info(
+                f"Force load complete: {result['rows_processed']} rows processed",
+                extra={'result': result}
+            )
+
+            return result
+
+        else:
+            raise ParameterValidationError(
+                f"Invalid action '{action}'. Must be 'get_default' or 'save'",
+                user_message="Invalid action specified"
+            )

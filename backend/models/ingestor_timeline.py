@@ -8,6 +8,16 @@ from datetime import datetime, timedelta
 from typing import Dict, Any
 from backend.lib.errors import DataAccessError
 
+# ==============================================================================
+# TIMELINE CONFIGURATION
+# ==============================================================================
+
+TIMELINE_DESKS = ["Options", "Exotics", "Inflation", "LDFX", "FXG"]
+
+# ==============================================================================
+# MODEL IMPLEMENTATION
+# ==============================================================================
+
 
 class IngestorTimelineModel:
     """
