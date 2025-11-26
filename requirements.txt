@@ -1,0 +1,16 @@
+# Core UI Framework
+voila>=0.3.0
+ipywidgets>=7.6.0
+jupyterlab>=3.0.0
+
+# Data Processing
+pandas>=1.1.0
+numpy>=1.19.0
+
+# Testing
+pytest>=6.0.0
+pytest-mock>=3.3.0
+
+# Note: At work with Python 3.7, use stricter versions:
+# pandas>=1.1.0,<2.0.0
+# numpy>=1.19.0,<1.22.0
